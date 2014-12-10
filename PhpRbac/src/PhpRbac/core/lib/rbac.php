@@ -22,6 +22,10 @@ class JModel
 		return Jf::tablePrefix();
 	}
 
+	function viewPrefix(){
+		return Jf::viewPrefix();
+	}
+
 	protected function isSQLite()
 	{
 		$Adapter=get_class(Jf::$Db);
@@ -131,7 +135,7 @@ abstract class BaseRbac extends JModel
 	 */
 	function count()
 	{
-		$Res = Jf::sql ( "SELECT COUNT(*) FROM {$this->tablePrefix()}{$this->type()}" );
+		$Res = Jf::sql ( "SELECT COUNT(*) FROM {$this->viewPrefix()}{$this->type()}" );
 		return (int)$Res [0] ['COUNT(*)'];
 	}
 
@@ -179,8 +183,8 @@ abstract class BaseRbac extends JModel
 		}
 
 		$res = Jf::sql ( "SELECT node.ID,{$GroupConcat} AS Path
-				FROM {$this->tablePrefix()}{$this->type()} AS node,
-				{$this->tablePrefix()}{$this->type()} AS parent
+				FROM {$this->viewPrefix()}{$this->type()} AS node,
+				{$this->viewPrefix()}{$this->type()} AS parent
 				WHERE node.Lft BETWEEN parent.Lft AND parent.Rght
 				AND  node.Title=?
 				GROUP BY node.ID
@@ -193,16 +197,16 @@ abstract class BaseRbac extends JModel
 			return null;
 			// TODO: make the below SQL work, so that 1024 limit is over
 
-		$QueryBase = ("SELECT n0.ID  \nFROM {$this->tablePrefix()}{$this->type()} AS n0");
+		$QueryBase = ("SELECT n0.ID  \nFROM {$this->viewPrefix()}{$this->type()} AS n0");
 		$QueryCondition = "\nWHERE 	n0.Title=?";
 
 		for($i = 1; $i < count ( $Parts ); ++ $i)
 		{
 			$j = $i - 1;
-			$QueryBase .= "\nJOIN 		{$this->tablePrefix()}{$this->type()} AS n{$i} ON (n{$j}.Lft BETWEEN n{$i}.Lft+1 AND n{$i}.Rght)";
+			$QueryBase .= "\nJOIN 		{$this->viewPrefix()}{$this->type()} AS n{$i} ON (n{$j}.Lft BETWEEN n{$i}.Lft+1 AND n{$i}.Rght)";
 			$QueryCondition .= "\nAND 	n{$i}.Title=?";
 			// Forcing middle elements
-			$QueryBase .= "\nLEFT JOIN 	{$this->tablePrefix()}{$this->type()} AS nn{$i} ON (nn{$i}.Lft BETWEEN n{$i}.Lft+1 AND n{$j}.Lft-1)";
+			$QueryBase .= "\nLEFT JOIN 	{$this->viewPrefix()}{$this->type()} AS nn{$i} ON (nn{$i}.Lft BETWEEN n{$i}.Lft+1 AND n{$j}.Lft-1)";
 			$QueryCondition .= "\nAND 	nn{$i}.Lft IS NULL";
 		}
 		$Query = $QueryBase . $QueryCondition;
@@ -614,14 +618,14 @@ class RbacManager extends JModel
         }
         $Res=Jf::sql ( "SELECT COUNT(*) AS Result
             FROM
-            {$this->tablePrefix()}userroles AS TUrel
+            {$this->viewPrefix()}userroles AS TUrel
 
-            JOIN {$this->tablePrefix()}roles AS TRdirect ON (TRdirect.ID=TUrel.RoleID)
-            JOIN {$this->tablePrefix()}roles AS TR ON ( TR.Lft BETWEEN TRdirect.Lft AND TRdirect.Rght)
+            JOIN {$this->viewPrefix()}roles AS TRdirect ON (TRdirect.ID=TUrel.RoleID)
+            JOIN {$this->viewPrefix()}roles AS TR ON ( TR.Lft BETWEEN TRdirect.Lft AND TRdirect.Rght)
             JOIN
-            (	{$this->tablePrefix()}permissions AS TPdirect
-            JOIN {$this->tablePrefix()}permissions AS TP ON ( TPdirect.Lft BETWEEN TP.Lft AND TP.Rght)
-            JOIN {$this->tablePrefix()}rolepermissions AS TRel ON (TP.ID=TRel.PermissionID)
+            (	{$this->viewPrefix()}permissions AS TPdirect
+            JOIN {$this->viewPrefix()}permissions AS TP ON ( TPdirect.Lft BETWEEN TP.Lft AND TP.Rght)
+            JOIN {$this->viewPrefix()}rolepermissions AS TRel ON (TP.ID=TRel.PermissionID)
             ) $LastPart",
             $UserID, $PermissionID );
 
@@ -758,7 +762,7 @@ class PermissionManager extends BaseRbac
 		if ($OnlyIDs)
 		{
 			$Res = Jf::sql ( "SELECT RoleID AS `ID` FROM
-				{$this->tablePrefix()}rolepermissions WHERE PermissionID=? ORDER BY RoleID", $Permission );
+				{$this->viewPrefix()}rolepermissions WHERE PermissionID=? ORDER BY RoleID", $Permission );
 
 			if (is_array ( $Res ))
 			{
@@ -770,8 +774,8 @@ class PermissionManager extends BaseRbac
 			else
 				return null;
 		} else {
-		    return Jf::sql ( "SELECT `TP`.ID, `TP`.Title, `TP`.Description FROM {$this->tablePrefix()}roles AS `TP`
-    		    LEFT JOIN {$this->tablePrefix()}rolepermissions AS `TR` ON (`TR`.RoleID=`TP`.ID)
+		    return Jf::sql ( "SELECT `TP`.ID, `TP`.Title, `TP`.Description FROM {$this->viewPrefix()}roles AS `TP`
+    		    LEFT JOIN {$this->viewPrefix()}rolepermissions AS `TR` ON (`TR`.RoleID=`TP`.ID)
     		    WHERE PermissionID=? ORDER BY TP.ID", $Permission );
 		}
 	}
@@ -872,18 +876,18 @@ class RoleManager extends BaseRbac
 	{
 		$Res = Jf::sql ( "
 					SELECT COUNT(*) AS Result
-					FROM {$this->tablePrefix()}rolepermissions AS TRel
-					JOIN {$this->tablePrefix()}permissions AS TP ON ( TP.ID= TRel.PermissionID)
-					JOIN {$this->tablePrefix()}roles AS TR ON ( TR.ID = TRel.RoleID)
+					FROM {$this->viewPrefix()}rolepermissions AS TRel
+					JOIN {$this->viewPrefix()}permissions AS TP ON ( TP.ID= TRel.PermissionID)
+					JOIN {$this->viewPrefix()}roles AS TR ON ( TR.ID = TRel.RoleID)
 					WHERE TR.Lft BETWEEN
-					(SELECT Lft FROM {$this->tablePrefix()}roles WHERE ID=?)
+					(SELECT Lft FROM {$this->viewPrefix()}roles WHERE ID=?)
 					AND
-					(SELECT Rght FROM {$this->tablePrefix()}roles WHERE ID=?)
+					(SELECT Rght FROM {$this->viewPrefix()}roles WHERE ID=?)
 					/* the above section means any row that is a descendants of our role (if descendant roles have some permission, then our role has it two) */
 					AND TP.ID IN (
 					SELECT parent.ID
-					FROM {$this->tablePrefix()}permissions AS node,
-					{$this->tablePrefix()}permissions AS parent
+					FROM {$this->viewPrefix()}permissions AS node,
+					{$this->viewPrefix()}permissions AS parent
 					WHERE node.Lft BETWEEN parent.Lft AND parent.Rght
 					AND ( node.ID=? )
 					ORDER BY parent.Lft
@@ -913,7 +917,7 @@ class RoleManager extends BaseRbac
 
 		if ($OnlyIDs)
 		{
-			$Res = Jf::sql ( "SELECT PermissionID AS `ID` FROM {$this->tablePrefix()}rolepermissions WHERE RoleID=? ORDER BY PermissionID", $Role );
+			$Res = Jf::sql ( "SELECT PermissionID AS `ID` FROM {$this->viewPrefix()}rolepermissions WHERE RoleID=? ORDER BY PermissionID", $Role );
 			if (is_array ( $Res ))
 			{
 				$out = array ();
@@ -924,8 +928,8 @@ class RoleManager extends BaseRbac
 			else
 				return null;
 		} else {
-	        return Jf::sql ( "SELECT `TP`.ID, `TP`.Title, `TP`.Description FROM {$this->tablePrefix()}permissions AS `TP`
-		        LEFT JOIN {$this->tablePrefix()}rolepermissions AS `TR` ON (`TR`.PermissionID=`TP`.ID)
+	        return Jf::sql ( "SELECT `TP`.ID, `TP`.Title, `TP`.Description FROM {$this->viewPrefix()}permissions AS `TP`
+		        LEFT JOIN {$this->viewPrefix()}rolepermissions AS `TR` ON (`TR`.PermissionID=`TP`.ID)
 		        WHERE RoleID=? ORDER BY TP.ID", $Role );
 		}
 	}
@@ -975,9 +979,9 @@ class RbacUserManager extends JModel
 				$RoleID = Jf::$Rbac->Roles->titleId ( $Role );
 		}
 
-		$R = Jf::sql ( "SELECT * FROM {$this->tablePrefix()}userroles AS TUR
-			JOIN {$this->tablePrefix()}roles AS TRdirect ON (TRdirect.ID=TUR.RoleID)
-			JOIN {$this->tablePrefix()}roles AS TR ON (TR.Lft BETWEEN TRdirect.Lft AND TRdirect.Rght)
+		$R = Jf::sql ( "SELECT * FROM {$this->viewPrefix()}userroles AS TUR
+			JOIN {$this->viewPrefix()}roles AS TRdirect ON (TRdirect.ID=TUR.RoleID)
+			JOIN {$this->viewPrefix()}roles AS TR ON (TR.Lft BETWEEN TRdirect.Lft AND TRdirect.Rght)
 
 			WHERE
 			TUR.UserID=? AND TR.ID=?", $UserID, $RoleID );
@@ -1065,8 +1069,8 @@ class RbacUserManager extends JModel
 
 		return Jf::sql ( "SELECT TR.*
 			FROM
-			{$this->tablePrefix()}userroles AS `TRel`
-			JOIN {$this->tablePrefix()}roles AS `TR` ON
+			{$this->viewPrefix()}userroles AS `TRel`
+			JOIN {$this->viewPrefix()}roles AS `TR` ON
 			(`TRel`.RoleID=`TR`.ID)
 			WHERE TRel.UserID=?", $UserID );
 	}
@@ -1084,7 +1088,7 @@ class RbacUserManager extends JModel
 		if ($UserID === null)
 		    throw new \RbacUserNotProvidedException ("\$UserID is a required argument.");
 
-		$Res = Jf::sql ( "SELECT COUNT(*) AS Result FROM {$this->tablePrefix()}userroles WHERE UserID=?", $UserID );
+		$Res = Jf::sql ( "SELECT COUNT(*) AS Result FROM {$this->viewPrefix()}userroles WHERE UserID=?", $UserID );
 		return (int)$Res [0] ['Result'];
 	}
 

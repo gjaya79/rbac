@@ -1,7 +1,7 @@
 <?php
 #TODO: test on sqlite
 
-if ($adapter=="pdo_mysql")
+/*if ($adapter=="pdo_mysql")
 {
 	try {
 		Jf::$Db=new PDO("mysql:host={$host};dbname={$dbname}",$user,$pass);
@@ -27,7 +27,11 @@ else # default to mysqli
 	@Jf::$Db=new mysqli($host,$user,$pass,$dbname);
 	if(jf::$Db->connect_errno==1049)
 		installMysqli($host,$user,$pass,$dbname);
-}
+}*/
+
+global $env;
+Jf::$Db=$env['pdo'];
+
 function getSqls($dbms)
 {
 	$sql=file_get_contents(dirname(dirname(dirname(__DIR__))) . "/database/{$dbms}.sql");

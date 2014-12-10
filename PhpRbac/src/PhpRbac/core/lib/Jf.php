@@ -11,6 +11,7 @@ class Jf
 	public static $Db = null;
 
 	public static $TABLE_PREFIX;
+	public static $VIEW_PREFIX;
 
 	private static $groupConcatLimitChanged = false;
 
@@ -22,6 +23,14 @@ class Jf
 	public static function tablePrefix()
 	{
 	    return self::$TABLE_PREFIX;
+	}
+
+	public static function setViewPrefix($viewPrefix){
+		self::$VIEW_PREFIX = $viewPrefix;
+	}
+
+	public static function viewPrefix(){
+		return self::$VIEW_PREFIX;
 	}
 
 	/**
@@ -70,13 +79,19 @@ class Jf
 
 		if (count ( $args ) == 1)
 		{
-			$result = self::$Db->query ( $Query );
-			if ($result===false)
-				return null;
-			$res=$result->fetchAll ( PDO::FETCH_ASSOC );
-			if ($res===array())
-				return null;
-			return $res;
+            // Check whether query is LOCK or UNLOCK Statement
+            if(preg_match('/LOCK|UNLOCK/', $Query)){
+                $res = self::$Db->exec($Query);
+                return $res;
+            }else{
+                $result = self::$Db->query ( $Query );
+                if ($result===false)
+                    return null;
+                $res=$result->fetchAll ( PDO::FETCH_ASSOC );
+                if ($res===array())
+                    return null;
+                return $res;
+            }
 		}
 		else
 		{
@@ -203,5 +218,6 @@ class Jf
 }
 
 Jf::setTablePrefix($tablePrefix);
+Jf::setViewPrefix($viewPrefix);
 Jf::$Rbac=new RbacManager();
 require_once __DIR__."/../setup.php";

@@ -52,6 +52,11 @@ class Rbac
     {
         return Jf::$Rbac->tablePrefix();
     }
+
+    public function viewPrefix()
+    {
+        return Jf::$Rbac->viewPrefix();
+    }
 }
 
 /** @} */ // End group phprbac */
